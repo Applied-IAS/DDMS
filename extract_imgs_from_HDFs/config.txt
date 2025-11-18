@@ -1,0 +1,10 @@
+# Annotation region: start/end coordinates in columns (X-axis) and rows (Y-axis)
+# Image size: 1280 columns × 730 rows
+start_col: 0        # Starting column index
+end_col: 1280       # Ending column index
+start_row: 0        # Starting row index
+end_row: 730        # Ending row index
+
+# Display window size for visualization
+window_col: 800     # Window width in pixels
+window_row: 500     # Window height in pixels

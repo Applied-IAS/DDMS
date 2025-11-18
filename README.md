@@ -1,6 +1,7 @@
 # DDMS: Four-Hour Thunderstorm Nowcasting using a Deep Diffusion Model
 
-![arXiv](https://img.shields.io/badge/arXiv-2404.10512-red)
+[![arXiv](https://img.shields.io/badge/arXiv-2404.10512-brightgreen)](https://arxiv.org/abs/2404.10512)
+
 <!-- ![Project](https://img.shields.io/badge/Project-Page-blue) -->
 <!-- ![Blog](https://img.shields.io/badge/Blog-Post-brightgreen) -->
 <!-- ![知乎](https://img.shields.io/badge/知乎-详解-orange) -->
@@ -9,7 +10,7 @@
 
 This repository contains the code for **four-hour thunderstorm nowcasting** using satellite data with a deep diffusion model, as described in our paper. The code supports both **satellite nowcasting** and **convection detection** tasks.
 
-The pre-trained weights for both tasks are publicly available, allowing you to reproduce our results or use the model for your own data.
+The pre-trained weights for both tasks are publicly available, allowing you to use the model for your own data. 
 
 > **Note:** This repository is still under active development.
 
@@ -25,10 +26,14 @@ The pre-trained weights for both tasks are publicly available, allowing you to r
   - [Usage](#usage)
     - [Testing](#testing)
       - [Pre-trained Weights](#pre-trained-weights)
-      - [Satellite nowcasting](#satellite-nowcasting)
-      - [Convection detection](#convection-detection)
+      - [Quick Start](#quick-start)
+      - [Individual Test Commands](#individual-test-commands)
+        - [Satellite nowcasting](#satellite-nowcasting)
+        - [Convection detection](#convection-detection)
     - [Training](#training)
-      - [Satellite nowcasting](#satellite-nowcasting-1)
+      - [Quick Start](#quick-start-1)
+      - [Training Command Details](#training-command-details)
+        - [Satellite Nowcasting (Multi-GPU Distributed Training)](#satellite-nowcasting-multi-gpu-distributed-training)
   - [Citation](#citation)
   - [License](#license)
 
@@ -98,6 +103,19 @@ sudo apt-get install -y ffmpeg libavcodec-dev libavformat-dev libavdevice-dev li
 
 The FengYun satellite data can be download from the website [http://data.nsmc.org.cn/portalsite/default.aspx]. 
 
+Here, this folder [**extract_imgs_from_HDFs**](./extract_imgs_from_HDFs)
+ provides two Python scripts for extracting infrared brightness temperature images from Fengyun-4A (FY-4A) HDF files, including DISK and REGC types.
+
+To extract China-region IR images
+```
+python extract_img_china.py
+```
+
+To extract full-disk IR images
+```
+python extract_img_full.py
+```
+
 <!-- Prepare your satellite dataset following the directory structure:
 
 ```text
@@ -118,27 +136,51 @@ Update the data paths in configs/config.yaml if necessary.
 
 - **Satellite nowcasting:**  
   Download from [Google Drive](https://drive.google.com/file/d/1RdxEfT8SJwA_rslraGTA3dETpfGOpp6a/view?usp=sharing), and place it under the path of 
-  `./results-mse-10-retrain-nature/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse/`
+  [./results/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse/](./results/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse/)
 
 - **Convection detection (local path):**  
-  `./gate_unet/dugs-unet-compare-with-rvos-params/best-m-20-0.0008-0.0029-0.9245-all-area.pth.tar`
+  [./gate_unet/model_parameters/best-m-28-0.0006-0.0032-0.9255_all_area.pth.tar]( ./gate_unet/model_parameters/)
 
-#### Satellite nowcasting
+
+#### Quick Start
+Run the complete test suite with a single command:
+```bash
+bash test_bash.sh
+```
+
+#### Individual Test Commands
+##### Satellite nowcasting
 ```bash
 python test_video.py --device 0
 ```
 
-#### Convection detection
+- device 0: the GPU ID for inference
+
+##### Convection detection
 ```bash
-python ./gate_unet/test_written_16_nature_new_color_bar.py --load_path '../results/evaluate/generated/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse/pred/'
+python ./gate_unet/run_detection.py --load_path '../results/evaluate/generated/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse/pred/'
 ```
+- load_path: the path of satellite nowcasting results
 
 ### Training
 
-#### Satellite nowcasting
-```bash
-python train_video.py 
+#### Quick Start
+Start the training process with:
 ```
+bash train_bash.sh
+```
+
+#### Training Command Details
+##### Satellite Nowcasting (Multi-GPU Distributed Training)
+```bash
+python -m torch.distributed.launch \
+    --use_env train_video.py \
+    --ndevice 4 \
+    --output_len 16 
+```
+-  ndevice 4: Utilize 4 GPUs for distributed training
+
+- output_len 16: Model generates 16 output frames per sequence
 
 ## Citation
 If you use this code for your research, please cite:

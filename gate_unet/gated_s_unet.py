@@ -13,7 +13,6 @@ class conv_block(nn.Module):
     """
     Convolution Block
     """
-
     def __init__(self, in_ch, out_ch):
         super(conv_block, self).__init__()
 
@@ -28,41 +27,6 @@ class conv_block(nn.Module):
     def forward(self, x):
         x = self.conv(x)
         return x
-
-# 使用卷积实现上采样，使得上采样可参与梯度反向传播下降，进而使得上采样是依赖于数据的
-# class DUpsampling(nn.Module):
-#     def __init__(self, inplanes, out_ch, scale, num_class=2, pad=0):
-#         super(DUpsampling, self).__init__()
-#         # ## W matrix
-#         # self.conv_w = nn.Conv2d(inplanes, num_class * scale * scale, kernel_size=1, padding=pad, bias=False)
-#         # ## P matrix
-#         # self.conv_p = nn.Conv2d(num_class * scale * scale, inplanes, kernel_size=1, padding=pad, bias=False)
-#
-#         self.conv_w = nn.Conv2d(inplanes, out_ch, kernel_size=1, padding=pad, bias=False)
-#
-#         self.scale = scale
-#
-#     def forward(self, x):
-#         x = self.conv_w(x)
-#         N, C, H, W = x.size()
-#         # N, W, H, C
-#         x_permuted = x.permute(0, 3, 2, 1)
-#         # print(x_permuted.size())
-#         # N, W, H*scale, C/scale
-#         x_permuted = x_permuted.contiguous().view((N, W, H * self.scale, int(C / (self.scale))))
-#         # print(x_permuted.size())
-#
-#         # N, H*scale, W, C/scale
-#         x_permuted = x_permuted.permute(0, 2, 1, 3)
-#         # N, H*scale, W*scale, C/(scale**2)
-#         x_permuted = x_permuted.contiguous().view(
-#             (N, H * self.scale, W * self.scale, int(C / (self.scale * self.scale))))
-#         # print(x_permuted.size())
-#
-#         # N, C/(scale**2), H*scale, W*scale
-#         x = x_permuted.permute(0, 3, 1, 2)
-#
-#         return x
 
 class DUpsampling_ori(nn.Module):
     def __init__(self, inplanes, scale, num_class=2, pad=0):
@@ -97,28 +61,6 @@ class DUpsampling_ori(nn.Module):
         x = x_permuted.permute(0, 3, 1, 2)
 
         return x
-
-# class up_conv_dusample(nn.Module):
-#     """
-#     Up Convolution Block
-#     """
-#
-#     def __init__(self, in_ch, out_ch, scale_factor):
-#         super(up_conv_dusample, self).__init__()
-#         self.upsample = DUpsampling(in_ch, in_ch, scale_factor)
-#         self.up = nn.Sequential(
-#             nn.Conv2d(in_ch // (scale_factor ** 2), out_ch, kernel_size=3, stride=1, padding=1, bias=True),
-#             nn.BatchNorm2d(out_ch),
-#             nn.ReLU(inplace=True)
-#         )
-#
-#     def forward(self, x):
-#         x = self.upsample(x)
-#         # print(x.size())
-#         x = self.up(x)
-#         return x
-
-
 
 class up_conv(nn.Module):
     """
@@ -365,31 +307,7 @@ class decoder_unet(nn.Module):
             # self.Up_conv3 = conv_block(filters[2] + 8, filters[1])
 
             self.dusample = DUpsampling_ori(filters[1], scale=2, num_class=2)
-            # self.Up2 = up_conv(filters[1], filters[0])
-            # self.Up_conv2 = conv_block(filters[1] * 2, filters[0])
-            # self.Up_conv2 = conv_block(filters[1], filters[0])
-
-            # self.Conv = nn.Conv2d(filters[0], out_ch, kernel_size=1, stride=1, padding=0)
-            # self.Conv = nn.Conv2d(filters[0]+8, out_ch, kernel_size=1, stride=1, padding=0)
-            # self._init_weight()
             self.T = nn.Parameter(torch.Tensor([1.00]))
-
-        # if use_Dusample:
-        #     self.d_up5 = up_conv_dusample(256, 64, 2)
-        #     self.up_conv5 = conv_block(384 + 64, 256)
-        #
-        #     self.d_up4 = up_conv_dusample(256, 64, 2)
-        #     self.up_conv4 = conv_block(128+8, 128)
-        #
-        #     self.d_up3 = up_conv_dusample(128, 32, 2)
-        #     self.up_conv3 = conv_block(64+8, 64)
-        #
-        #     self.d_up2 = up_conv_dusample(64, 16, 2)
-        #     self.up_conv2 = conv_block(32+8, 16)
-        #
-        #     self.Conv_last = nn.Conv2d(filters[0]+8, out_ch, kernel_size=1, stride=1, padding=0)
-        #     self._init_weight()
-        #     self.T = nn.Parameter(torch.Tensor([1.00]))
 
     def _init_weight(self):
         for m in self.modules():
@@ -401,87 +319,24 @@ class decoder_unet(nn.Module):
         [e1, e2, e3, e4, e5] = x
 
         if edge_feature is not None:
-            # print(e5.size(), edge_feature.size())
-            # input = torch.rand((2, 256, 48, 48))
-            # edge = torch.rand((2, 1, 768, 768))
-            # print(e4.size())
             fuse = self.aspp(e4, edge_feature)
-            # print(fuse.size())
-            # print("e1 is {}".format(e1.size()))
-            # fuse_1 = self.aspp_1(e1, edge_feature)
-            # print("fuse_1 is {}".format(fuse_1.size()))
             if self.use_Dusample:
                 pass
-                # d5 = self.d_up5(e5)
-                # # print("aaaa  {}" .format(d5.size()))
-                # # print(e4.size(), d5.size())
-                # d5 = torch.cat((fuse, d5), dim=1)
-                # # print(d5.size())
-                #
-                # d5 = self.up_conv5(d5)
-                #
-                # d4 = self.d_up4(d5)
-                # edge_3 = F.interpolate(edge_feature, d4.size()[2:],
-                #                      mode='bilinear', align_corners=True)
-                # edge_3 = self.edge_conv_e3(edge_3)
-                # d4 = torch.cat((e3, d4, edge_3), dim=1)
-                # d4 = self.up_conv4(d4)
-                #
-                # d3 = self.d_up3(d4)
-                # edge_2 = F.interpolate(edge_feature, d3.size()[2:],
-                #                        mode='bilinear', align_corners=True)
-                # edge_2 = self.edge_conv_e3(edge_2)
-                # d3 = torch.cat((e2, d3, edge_2), dim=1)
-                # d3 = self.up_conv3(d3)
-                #
-                # d2 = self.d_up2(d3)
-                # edge_1 = F.interpolate(edge_feature, d2.size()[2:],
-                #                        mode='bilinear', align_corners=True)
-                # edge_1 = self.edge_conv_e1(edge_1)
-                # d2 = torch.cat((e1, d2, edge_1), dim=1)
-                # d2 = self.up_conv2(d2)
-                #
-                # edge = self.edge_conv(edge_feature)
-                # d2 = torch.cat((edge, d2), dim=1)
-                #
-                # logits = self.Conv_last(d2)
-                # logits = logits / self.T
-                # return logits
             else:
                 d5 = self.Up5(e5)
-                # print(d5.size())
-                # print(e4.size(), d5.size())
                 d5 = torch.cat((fuse, d5), dim=1)
-                # print(d5.size())
 
                 d5 = self.Up_conv5(d5)
 
                 d4 = self.Up4(d5)
-                # edge_3 = F.interpolate(edge_feature, d4.size()[2:],
-                #                      mode='bilinear', align_corners=True)
-                # edge_3 = self.edge_conv_e3(edge_3)
-                #, edge_3
                 d4 = torch.cat((e3, d4), dim=1)
                 d4 = self.Up_conv4(d4)
 
                 d3 = self.Up3(d4)
-                # edge_2 = F.interpolate(edge_feature, d3.size()[2:],
-                #                        mode='bilinear', align_corners=True)
-                # edge_2 = self.edge_conv_e3(edge_2)
-                # , edge_2
                 x1_2 = F.interpolate(e1, e2.size()[2:], mode='bilinear', align_corners=True)
                 d3 = torch.cat((x1_2, e2, d3), dim=1)
                 d3 = self.Up_conv3(d3)
 
-                # d2 = self.Up2(d3)
-                # d2 = torch.cat((e1, d2), dim=1)
-                # # d2 = torch.cat((fuse_1, d2), dim=1)
-                # d2 = self.Up_conv2(d2)
-                #
-                # # edge_1 = self.edge_conv(edge_feature)
-                # # d2 = torch.cat((edge_1, d2), dim=1)
-                #
-                # logits = self.Conv(d2)
                 logits = self.dusample(d3)
                 logits = logits / self.T
                 return logits
@@ -507,7 +362,6 @@ class decoder_unet(nn.Module):
             return logits
 
 
-
 class unet_seg(nn.Module):
     def __init__(self, in_ch=3, out_ch=1):
         super(unet_seg, self).__init__()
@@ -524,7 +378,6 @@ class unet_seg(nn.Module):
         edge_out = self.encoder_edge([e1, e2, e3, e4, e5])
         # edge_out = edge_out.cuda()
 
-
         cat = torch.cat((edge_out, img_canny), dim=1)
         # print(cat.size())
         edge_feature = self.conv_canny(cat)
@@ -533,22 +386,12 @@ class unet_seg(nn.Module):
 
         return seg, edge_out
 
-
-# 模型生成loss权重
+# loss weight for model
 class multi_loss_layer(nn.Module):
-    # 当使用这个的时候，回归loss全用mse，分类loss全用focal loss或cross entropy的一种
     def __init__(self, basic_w):
         super(multi_loss_layer, self).__init__()
-        # basic_w: 权重是否需要除以2
-        # loss_w_r = loss_weight_regression = 1/(2*var) 这是对于回归loss的权重,针对mse，mae是否就不需要除2了？
-        # loss_w_c = loss_weight_classify = 1 / (var)  这是对于分类loss的权重，focal loss gamma=2有平方项，是否就需要除以2？
-        # loss = sum(loss_i * loss_w_i + std_i.log())
-        # log_var = var.log()  (-inf ~ +inf)
-        # var = exp(-s) (0, inf)  避免了除以0
-        # std.log() = var.log()/2
         self.basic_w = basic_w
         self.log_var = nn.Parameter(torch.FloatTensor([0] * len(basic_w)))
-        # self.log_var = nn.Parameter((1/torch.FloatTensor([121*2, 19, 91*2, 30])).log() * -1)
 
     def forward(self, loss_list):
         # loss_list: loss_list_r + loss_list_c
@@ -563,50 +406,8 @@ class multi_loss_layer(nn.Module):
         print(w)
         return loss
 
-
 if __name__ == "__main__":
     input = torch.rand((2, 1, 800, 800)).cuda()
     model = unet_seg(in_ch=1, out_ch=2).cuda()
     seg, edge = model(input)
     print(seg.size())
-    # image = torch.rand((2, 16, 400, 800))
-    # edge = torch.rand((2, 1, 400, 800))
-    # model = _AtrousSpatialPyramidPoolingModule(in_dim=16, reduction_dim=8, output_stride=8)
-    # out = model(image, edge)
-    # print(out.size())
-    # print(seg.size(), edge.size())
-    # input = torch.rand((2, 256, 48, 48))
-    # edge = torch.rand((2, 1, 768, 768))
-    # print(torch.__version__)
-    # model = _AtrousSpatialPyramidPoolingModule(256, 64, output_stride=8)
-    # a = model(input, edge)
-    # print(a.size())
-    # a = torch.rand((2, 256, 25, 50))
-    # model = up_conv_dusample(256, 64, 2)
-    # c = model(a)
-    # print(c.size())
-
-    # loss_list = [1, 1, 2, 2, 2]
-    # layer = multi_loss_layer(loss_list)
-    # (loss_seg, loss_edge, loss_dual, loss_att, loss_ce) = (4.0, 3.0, 2.0, 1.0, 1.0)
-    # a = layer([loss_seg, loss_edge, loss_dual, loss_att, loss_ce])
-    # print(a)
-    # label = np.zeros((1, 3, 6), dtype=np.int)
-    # label[:, 0, 3] = 1
-    # label[:, 1:, 2] = 1
-    # label[:, 2, 2:4] = 1
-    # print(label)
-    # seg = torch.from_numpy(label)
-    # seg = torch.unsqueeze(seg, dim=1)
-    # seggt_onehot = torch.zeros(1, 2, 3, 6).scatter_(1, seg.long(), 1)
-    # print(seggt_onehot[:, :, 0, 3])
-    # seggt_onehot = seggt_onehot.permute(0, 2, 3, 1)
-    # # N, H, W/sacle, C*scale
-    # seggt_onehot = seggt_onehot.contiguous().view((N, H, int(W / scale), C * scale))
-    # # N, W/sacle, H, C*scale
-    # self.seggt_onehot = self.seggt_onehot.permute(0, 2, 1, 3)
-    #
-    # self.seggt_onehot = self.seggt_onehot.contiguous().view((N, int(W / scale),
-    #                                                          int(H / scale), C * scale * scale))
-    #
-    # self.seggt_onehot = self.seggt_onehot.permute(0, 3, 2, 1)

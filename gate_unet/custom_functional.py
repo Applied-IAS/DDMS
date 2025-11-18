@@ -121,7 +121,6 @@ def convTri(input, r, cuda=False):
                       padding=0, groups=c)
     return output
 
-
 def compute_normal(E, cuda=False):
     if torch.sum(torch.isnan(E)) != 0:
         print('nans found here')

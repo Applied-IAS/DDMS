@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 from torch.distributions import Normal
 from .utils import exists, cosine_beta_schedule, extract, noise_like, default, extract_tensor
-
+import math
 
 class GaussianDiffusion(nn.Module):
     def __init__(
@@ -131,7 +131,6 @@ class GaussianDiffusion(nn.Module):
 
     
     def p_sample_loop_ddim(self, shape, context, clip_denoised=True, init=None, eta=0):
-        print('using the ddim sampling manner')
         device = self.alphas_cumprod.device
 
         b = shape[0]
@@ -209,9 +208,9 @@ class GaussianDiffusion(nn.Module):
 
     @torch.no_grad() # no grad computed
     def sample(self, init_frames, num_of_frames=3):
-        import math
-        scheduled_weights = [0.5*(1 - i / 32) + 1 / (math.exp(i/16.0) + 1) for i in range(16)]
-        weights = torch.FloatTensor(scheduled_weights).cuda(0)
+        w = 0.4
+        scheduled_weights = [ w*0.5 * (1 + math.cos(math.pi * i / 15)) + (1-w) for i in range(16)] 
+        weights = torch.FloatTensor(scheduled_weights)
 
         video = [frame for frame in init_frames]
         video_diff = [frame for frame in init_frames]
@@ -235,27 +234,19 @@ class GaussianDiffusion(nn.Module):
                 generated_frame = self.p_sample_loop(init_frames[0].shape, context)
             video_diff.append(generated_frame)
             video_mse.append(trans_shift_scale[0])
-            # generated_frame, res = self.p_sample_loop(init_frames[0].shape, context)
+
             if exists(self.transform_fn) and (
                 self.transform_fn.context_mode in ["residual"]
             ):
-                # res.append(generated_frame)
-                # generated_frame = generated_frame * trans_shift_scale[1] + trans_shift_scale[0] 
-                # generated_frame = generated_frame + trans_shift_scale[0] # without weight for diffusion part.
-                # generated_frame = generated_frame + video_mse[-1] # without weight for diffusion part.
                 
                 generated_frame = generated_frame * weights[count] + video_mse[-1] # manual weights
                 count += 1
 
-                # mu.append(trans_shift_scale[0])
-            # context = self.history_fn(generated_frame.clamp(-1, 1))
             context = self.history_fn(video_mse[-1].clamp(-1, 1))
             if exists(self.transform_fn):
-                # trans_shift_scale = self.transform_fn(generated_frame.clamp(-1, 1))
-                trans_shift_scale = self.transform_fn(video_mse[-1].clamp(-1, 1)) # remove the diffusion part for producing the next frame. 
+                trans_shift_scale = self.transform_fn(video_mse[-1].clamp(-1, 1)) 
             video.append(generated_frame)
-        # print('length of video', len(video))
-        return torch.stack(video, 0), torch.stack(video_diff, 0), torch.stack(video_mse, 0)#, torch.stack(mu, 0), torch.stack(res, 0)
+        return torch.stack(video, 0), torch.stack(video_diff, 0), torch.stack(video_mse, 0)
 
     def q_sample(self, x_start, t, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
@@ -266,14 +257,12 @@ class GaussianDiffusion(nn.Module):
         )
 
     def p_losses(self, x_start, context, t, trans_shift_scale):
-        mse_loss = F.mse_loss(x_start, trans_shift_scale[0]) # add the mse loss
-        # return mse_loss, mse_loss, mse_loss
+        mse_loss = F.mse_loss(x_start, trans_shift_scale[0]) 
         noise = torch.randn_like(x_start)
         cur_frame = x_start
         if exists(self.transform_fn):
             self.otherlogs["predict"].append(trans_shift_scale[0].detach())
             if self.transform_fn.context_mode in ["residual"]:
-                # x_start = (x_start - trans_shift_scale[0]) / trans_shift_scale[1]
                 x_start = (x_start - trans_shift_scale[0]) 
                 x_start.clamp_(-1, 1)
             else:
@@ -296,17 +285,10 @@ class GaussianDiffusion(nn.Module):
                 loss = F.mse_loss(x_start, x_recon)
             else:
                 raise NotImplementedError()
-        # print('the diffusion loss and mse loss', loss, 1000*mse_loss)
-        print('the diffusion loss and mse loss', loss, 1*mse_loss)
-        # return loss + 1000*mse_loss, loss, 1000*mse_loss
         return loss + 10*mse_loss, loss, 10*mse_loss
-        # return loss + 1*mse_loss, loss, 1*mse_loss
-        # return loss, loss, 1*mse_loss
         
 
     def step_forward(self, x, context, t, trans_shift_scale):
-        # _, _, h, w, img_size = *x.shape, self.image_size
-        # assert h == img_size and w == img_size, f"height and width of image must be {img_size}"
         return self.p_losses(x, context, t, trans_shift_scale)
     
     def scan_context(self, x):
@@ -318,8 +300,6 @@ class GaussianDiffusion(nn.Module):
         device = video.device
         T, B, C, H, W = video.shape
         t = torch.randint(0, self.num_timesteps, (B,), device=device).long()
-        # print('the length of video', video.shape)
-        # print('this is a t', t.shape)
         loss = 0
         d_loss = 0
         mse_loss = 0
@@ -330,7 +310,6 @@ class GaussianDiffusion(nn.Module):
             self.otherlogs["predict"] = []
 
         for i in range(video.shape[0]):
-            # print(i)
             if i >= 8: # compute the loss from the 9-th frame
                 L, diff, mse = self.step_forward(video[i], context, t, trans_shift_scale)
                 loss += L
@@ -342,6 +321,4 @@ class GaussianDiffusion(nn.Module):
                 else:
                     context, trans_shift_scale = self.scan_context(trans_shift_scale[0]) # train the long-term prediction ability of GRU. 
 
-        # if exists(self.transform_fn):
-        #     self.otherlogs["predict"] = torch.stack(self.otherlogs["predict"], 0)
         return loss / (video.shape[0] - 8), d_loss / (video.shape[0] - 8), mse_loss / (video.shape[0] - 8) # compute the loss from the 9-th frame

@@ -17,33 +17,19 @@ def model_name_compare(x, y):
         return 0
 
 def deal_name(s):
-    # s = s.split('.')[0]
-    s = s.split('_')[0]
-    # names = s.split('_')
-    # print(names)
-    # return int(names[-2])*100 + int(names[-1])
+    s = s.split('.')[0]
     return int(s)
         
 
 def make_dataset(dataset_dir):
     frame_path = []
-    # Find and loop over all the clips in root `dir`.
     for index, folder in enumerate(sorted(os.listdir(dataset_dir), key = cmp_to_key(model_name_compare))):
-        # clipsFolderPath = os.path.join(dataset_dir, folder, 'ground_truth')
         clipsFolderPath = os.path.join(dataset_dir, folder)
-        # Skip items which are not folders.
         if not (os.path.isdir(clipsFolderPath)):
             continue
         frame_path.append([])
-        # Find and loop over all the frames inside the clip.
         imgs = [ f for f in os.listdir(clipsFolderPath) if 'png' in f ]
-        # for image in sorted(os.listdir(clipsFolderPath), key = cmp_to_key(model_name_compare)): #这里不排序的话，序列就被打断了
-        for image in sorted(imgs, key = cmp_to_key(model_name_compare)): #这里不排序的话，序列就被打断了
-        # for image in sorted(os.listdir(clipsFolderPath)):
-            # Add path to list.
-            
-            # if int(image.split('.')[0]) <41:
-            #     print(image)
+        for image in sorted(imgs, key = cmp_to_key(model_name_compare)): 
             frame_path[index].append(os.path.join(clipsFolderPath, image))
             
     return frame_path
@@ -53,7 +39,6 @@ class Satellite(Dataset):
         self.frame_path = make_dataset(dataset_dir)
         self.seq_len = seq_len
         self.train = train
-        # print(len(self.frame_path))
         self.clips = []
         for video_i in range(len(self.frame_path)):
             video_frame_num = len(self.frame_path[video_i])
@@ -69,7 +54,6 @@ class Satellite(Dataset):
             frame = frame.astype(np.float32)
             frame = frame/255.0
             sample.append(frame)
-        # return sample
         sample = np.array(sample)
         return torch.FloatTensor(sample)
 
@@ -81,7 +65,6 @@ class Satellite_Whole(Dataset):
         self.frame_path = make_dataset(dataset_dir)
         self.seq_len = seq_len
         self.train = train
-        # print(len(self.frame_path))
         self.clips = []
         for video_i in range(len(self.frame_path)):
             video_frame_num = len(self.frame_path[video_i])
@@ -98,19 +81,13 @@ class Satellite_Whole(Dataset):
             frame = frame.astype(np.float32)
             frame = frame/255.0
             sample.append(frame)
-        # return sample
         return torch.FloatTensor(np.array(sample))
 
     def constant_padding_image(self, image):
-        # b, t, c, h, w = image.shape
         image = torch.FloatTensor(image)
         temp = image.unsqueeze(0).unsqueeze(0)
-        # print(temp.shape)
-        # print(temp.shape)
         m = torch.nn.ReflectionPad2d((0, 0, 19, 19))
         res = m(temp)
-        # print(res.shape)
-        # exit()
         return res.squeeze(0).squeeze(0).numpy()
 
     def __len__(self):
