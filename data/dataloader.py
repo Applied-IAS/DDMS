@@ -17,10 +17,12 @@ def model_name_compare(x, y):
         return 0
 
 def deal_name(s):
-    s = s.split('.')[0]
+    if '_' in s:
+        s = s.split('_')[0]
+    else:
+        s = s.split('.')[0]
     return int(s)
         
-
 def make_dataset(dataset_dir):
     frame_path = []
     for index, folder in enumerate(sorted(os.listdir(dataset_dir), key = cmp_to_key(model_name_compare))):

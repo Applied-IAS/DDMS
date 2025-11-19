@@ -136,7 +136,7 @@ Update the data paths in configs/config.yaml if necessary.
 
 - **Satellite nowcasting:**  
   Download from [Google Drive](https://drive.google.com/file/d/1RdxEfT8SJwA_rslraGTA3dETpfGOpp6a/view?usp=sharing), and place it under the path of 
-  [./results/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse/](./results/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse/)
+  [./results/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse](./results/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse)
 
 - **Convection detection (local path):**  
   [./gate_unet/model_parameters/best-m-28-0.0006-0.0032-0.9255_all_area.pth.tar]( ./gate_unet/model_parameters/)
@@ -175,10 +175,10 @@ bash train_bash.sh
 ```bash
 python -m torch.distributed.launch \
     --use_env train_video.py \
-    --ndevice 4 \
+    --ndevice 8 \
     --output_len 16 
 ```
--  ndevice 4: Utilize 4 GPUs for distributed training
+-  ndevice 8: Utilize 8 GPUs for distributed training
 
 - output_len 16: Model generates 16 output frames per sequence
 
