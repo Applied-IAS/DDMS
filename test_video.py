@@ -98,7 +98,7 @@ for data_config in config.data_configs:
                 aux_loss=config.aux_loss
             )
 
-            N_SAMPLED = 12 if 'kth' in data_config["dataset_name"] else 16
+            N_SAMPLED = 12 if 'radar' in data_config["dataset_name"] else 16
 
             # Remove 'module.' prefix if present
             new_state_dict = collections.OrderedDict()
@@ -132,7 +132,6 @@ for data_config in config.data_configs:
                 sampled = model.sample(init_frames=batch[:config.N_CONTEXT], num_of_frames=N_SAMPLED)[0].transpose(0, 1)
                 sampled = ((sampled + 1.0) / 2.0)[:, config.N_CONTEXT:, :, :, :]
                 sampled = sampled.clamp(0, 1)
-
                 # =========================
                 # Save generated results
                 # =========================

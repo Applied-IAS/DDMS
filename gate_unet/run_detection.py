@@ -14,6 +14,8 @@ from torch.utils.data import Dataset
 from gated_s_unet import unet_seg
 from config_gated import *
 
+from fusion import write_gifs
+
 # ----------------------------
 #  Argument Parser
 # ----------------------------
@@ -179,3 +181,5 @@ with torch.no_grad():
                         lw[idx2] = 9999  # mark visited
 
                     Image.fromarray(out, mode="RGBA").save(os.path.join(save_dir, f"{frame_i}.png"))
+
+write_gifs(args.load_path)

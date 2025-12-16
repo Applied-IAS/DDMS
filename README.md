@@ -12,7 +12,7 @@ This repository contains the code for **four-hour thunderstorm nowcasting** usin
 
 The pre-trained weights for both tasks are publicly available, allowing you to use the model for your own data. 
 
-> **Note:** This repository is still under active development.
+<!-- > **Note:** This repository is still under active development. -->
 
 ---
 
@@ -135,7 +135,7 @@ Update the data paths in configs/config.yaml if necessary.
 #### Pre-trained Weights
 
 - **Satellite nowcasting:**  
-  Download from [Google Drive](https://drive.google.com/file/d/1RdxEfT8SJwA_rslraGTA3dETpfGOpp6a/view?usp=sharing), and place it under the path of 
+  Download from [zenodo](https://zenodo.org/records/17568342), and place it under the path of 
   [./results/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse](./results/resnet-adam-noise-l1-satellite-d64-t1000-residual-alFalse)
 
 - **Convection detection (local path):**  
